@@ -28,7 +28,7 @@ jobs:
 
       - name: build docker image
         run: |
-          docker build -t ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ github.sha }} .
+          docker build -f Dockerfile -t ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ github.sha }} ./app
 
       - name: scan image with Grype
         uses: anchore/scan-action@v7
