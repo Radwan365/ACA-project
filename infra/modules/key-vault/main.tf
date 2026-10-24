@@ -1,3 +1,5 @@
+data "azurerm_client_config" "current" {}
+
 resource "azurerm_key_vault" "kv" {
 
   #checkov:skip=CKV_AZURE_42:Purge protection off by design so the vault can be torn down and rebuilt quickly
