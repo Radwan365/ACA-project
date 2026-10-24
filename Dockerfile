@@ -8,6 +8,7 @@ RUN yarn build
 
 # stage 2 'production'
 FROM nginx:alpine
+RUN apk upgrade --no-cache && apk del --no-cache curl
 COPY --from=builder /app/build /usr/share/nginx/html
 EXPOSE 80
 CMD [ "nginx", "-g", "daemon off;" ]
