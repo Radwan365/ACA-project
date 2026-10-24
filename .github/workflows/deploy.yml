@@ -42,8 +42,6 @@ jobs:
     defaults:
       run:
         working-directory: infra
-        framework: terraform
-        skip_path: bootstrap
 
     steps:
       - name: Checkout code
@@ -73,8 +71,9 @@ jobs:
       - name: checkov scan
         uses: bridgecrewio/checkov-action@v12
         with:
-          directory: terraform
+          directory: infra
           framework: terraform
+          skip_path: bootstrap
           output_format: cli
           quiet: false
 
