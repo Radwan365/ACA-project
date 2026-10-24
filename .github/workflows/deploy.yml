@@ -5,7 +5,8 @@ on:
     branches:
       - main
     paths:
-      - "terraform/**"
+      - "infra/**"
+      - "!infra/bootstrap/**"
       - ".github/workflows/deploy.yml"
 
   workflow_run:
@@ -40,7 +41,9 @@ jobs:
     if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success')
     defaults:
       run:
-        working-directory: terraform
+        working-directory: infra
+        framework: terraform
+        skip_path: bootstrap
 
     steps:
       - name: Checkout code
