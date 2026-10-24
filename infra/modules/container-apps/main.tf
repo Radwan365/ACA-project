@@ -13,6 +13,16 @@ resource "azurerm_log_analytics_workspace" "law" {
 #   docker push <acr>.azurecr.io/<container_apps_image>
 #   terraform apply
 resource "azurerm_container_registry" "acr" {
+
+  #checkov:skip=CKV_AZURE_164:Content trust requires Premium SKU; not used for cost
+  #checkov:skip=CKV_AZURE_167:Retention policy requires Premium SKU; not used for cost
+  #checkov:skip=CKV_AZURE_139:Private access requires Premium plus private endpoint; GitHub runners push over internet
+  #checkov:skip=CKV_AZURE_163:Images scanned with Grype in CI before push
+  #checkov:skip=CKV_AZURE_237:Dedicated data endpoints require Premium SKU; not used for cost
+  #checkov:skip=CKV_AZURE_165:Single-region deployment; geo-replication not needed
+  #checkov:skip=CKV_AZURE_233:Dev environment in single region; zone redundancy not needed
+  #checkov:skip=CKV_AZURE_166:Quarantine not used; Grype scan in CI gates images before push
+
   name                = var.azure_container_registry_name
   location            = var.location
   resource_group_name = var.resource_group_name

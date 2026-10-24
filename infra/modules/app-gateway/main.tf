@@ -1,4 +1,8 @@
 resource "azurerm_application_gateway" "appgw" {
+
+  #checkov:skip=CKV_AZURE_120:WAF out of scope for brief; Standard_v2 chosen for cost
+  #checkov:skip=CKV_AZURE_218:Predefined AppGwSslPolicy20220101 enforces TLS 1.2 minimum
+
   name                = var.app_gateway_name
   location            = var.location
   resource_group_name = var.resource_group_name
@@ -103,4 +107,5 @@ resource "azurerm_application_gateway" "appgw" {
   }
 
   tags = var.tags
+
 }

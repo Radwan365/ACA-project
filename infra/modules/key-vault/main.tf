@@ -1,26 +1,11 @@
-terraform {
-  required_providers {
-    azurerm = {
-      source = "hashicorp/azurerm"
-    }
-    tls = {
-      source = "hashicorp/tls"
-    }
-    acme = {
-      source = "vancluever/acme"
-    }
-    time = {
-      source = "hashicorp/time"
-    }
-    random = {
-      source = "hashicorp/random"
-    }
-  }
-}
-
-data "azurerm_client_config" "current" {}
-
 resource "azurerm_key_vault" "kv" {
+
+  #checkov:skip=CKV_AZURE_42:Purge protection off by design so the vault can be torn down and rebuilt quickly
+  #checkov:skip=CKV_AZURE_110:Purge protection off by design so the vault can be torn down and rebuilt quickly
+  #checkov:skip=CKV_AZURE_189:GitHub runners and ACME DNS challenge reach the vault over the internet
+  #checkov:skip=CKV_AZURE_109:Runner IPs change per run; firewall allow-list not practical
+  #checkov:skip=CKV2_AZURE_32:No private endpoint; CI runners access the vault over the internet
+
   name                       = var.key_vault_name
   location                   = var.location
   resource_group_name        = var.resource_group_name

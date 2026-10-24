@@ -28,6 +28,9 @@ resource "azurerm_subnet" "aca_subnet" {
 }
 
 resource "azurerm_network_security_group" "nsg_agw" {
+
+  #checkov:skip=CKV_AZURE_160:Port 80 only serves the App Gateway HTTP to HTTPS redirect
+
   name                = var.nsg_agw_name
   location            = var.location
   resource_group_name = var.resource_group_name
