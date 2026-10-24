@@ -25,7 +25,7 @@ certificate_name        = "cert-tm-dev-eus"
 
 # --- container-apps ---
 container_apps_name             = "ca-tm-dev-eus"
-container_apps_image            = "tm:v1"
+container_apps_image            = "tm:ce3ca1a8dc02fcef92610c1995ed4bf7d7a54c9a"
 container_apps_environment_name = "cae-tm-dev-eus"
 azure_container_registry_name   = "acrtmradwan"
 azure_container_registry_sku    = "Basic"
