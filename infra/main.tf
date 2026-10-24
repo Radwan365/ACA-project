@@ -25,15 +25,16 @@ module "networking" {
 module "key_vault" {
   source = "./modules/key-vault"
 
-  resource_group_name     = data.azurerm_resource_group.rg.name
-  location                = var.location
-  tags                    = var.tags
-  sku_name                = var.key_vault_sku_name
-  key_vault_name          = var.key_vault_name
-  agw_kv_identity_name    = var.agw_kv_identity_name
-  acme_registration_email = var.acme_registration_email
-  common_name             = var.common_name
-  certificate_name        = var.certificate_name
+  resource_group_name               = data.azurerm_resource_group.rg.name
+  location                          = var.location
+  tags                              = var.tags
+  sku_name                          = var.key_vault_sku_name
+  key_vault_name                    = var.key_vault_name
+  agw_kv_identity_name              = var.agw_kv_identity_name
+  acme_registration_email           = var.acme_registration_email
+  common_name                       = var.common_name
+  certificate_name                  = var.certificate_name
+  certificate_officer_principal_ids = var.certificate_officer_principal_ids
 
   # wired from dns
   dns_zone_name = module.dns.public_zone_name

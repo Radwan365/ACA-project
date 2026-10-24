@@ -261,3 +261,8 @@ variable "tags" {
   description = "Tags applied to every resource that supports them."
   type        = map(string)
 }
+
+variable "certificate_officer_principal_ids" {
+  description = "Principals granted Key Vault Certificates Officer on the vault."
+  type        = map(string)
+}

@@ -52,3 +52,8 @@ variable "tags" {
   description = "Tags applied to every resource that supports them."
   type        = map(string)
 }
+
+variable "certificate_officer_principal_ids" {
+  description = "Principals that may write certificates to Key Vault, keyed by a stable name. Fixed list so the assignment doesn't change with whoever runs Terraform."
+  type        = map(string)
+}

@@ -1,0 +1,82 @@
+name: Terraform apply
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "terraform/**"
+      - ".github/workflows/deploy.yml"
+
+  workflow_run:
+    workflows: ["Docker build CI"]
+    types:
+      - completed
+    branches:
+      - main
+
+concurrency:
+  group: terraform-tm-dev
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  ARM_USE_OIDC: true
+  ARM_USE_AZUREAD: true
+  ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+  ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+  ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+  ACR_NAME: acrtmradwan
+  IMAGE_NAME: tm
+  TF_IN_AUTOMATION: true
+
+jobs:
+  plan-and-apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success')
+    defaults:
+      run:
+        working-directory: terraform
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: setup terraform
+        uses: hashicorp/setup-terraform@v6
+        with:
+          terraform_version: 1.12.2
+
+      - name: Terraform Format
+        run: terraform fmt -check
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Validate
+        run: terraform validate
+
+      - name: checkov scan
+        uses: bridgecrewio/checkov-action@v13
+        with:
+          directory: terraform
+          framework: terraform
+          output_format: cli
+          quiet: false
+
+      - name: Terraform Plan
+        run: terraform plan -out=tfplan
+
+      - name: Terraform Apply
+        run: terraform apply -input=false tfplan

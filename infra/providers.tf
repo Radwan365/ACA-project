@@ -21,14 +21,6 @@ terraform {
       version = "~> 3.6"
     }
   }
-
-  backend "azurerm" {
-    resource_group_name  = "rg-tfstate-tm-eus"
-    storage_account_name = "sttmtfstateeus"
-    container_name       = "tfstate"
-    key                  = "tm-dev.tfstate"
-    use_azuread_auth     = true
-  }
 }
 
 # subscription_id comes from the ARM_SUBSCRIPTION_ID environment variable (required since azurerm v4)
@@ -38,6 +30,7 @@ provider "azurerm" {
       purge_soft_delete_on_destroy = false
     }
   }
+  resource_provider_registrations = "none"
 }
 
 provider "acme" {

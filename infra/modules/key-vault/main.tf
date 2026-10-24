@@ -48,9 +48,11 @@ resource "azurerm_role_assignment" "agw_kv_role_assignment" {
 }
 
 resource "azurerm_role_assignment" "deployer_certificates_officer" {
+  for_each = var.certificate_officer_principal_ids
+
   scope                = azurerm_key_vault.kv.id
   role_definition_name = "Key Vault Certificates Officer"
-  principal_id         = data.azurerm_client_config.current.object_id
+  principal_id         = each.value
 }
 
 # RBAC assignments take a few minutes to propagate; wait before anything uses them
