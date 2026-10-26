@@ -76,6 +76,7 @@ resource "azurerm_container_app" "app" {
   resource_group_name          = var.resource_group_name
   container_app_environment_id = azurerm_container_app_environment.cae.id
   revision_mode                = "Single"
+  workload_profile_name        = "Consumption"
 
   identity {
     type         = "UserAssigned"
