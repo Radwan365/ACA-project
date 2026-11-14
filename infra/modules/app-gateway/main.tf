@@ -9,7 +9,7 @@ resource "azurerm_application_gateway" "appgw" {
 
   sku {
     name = var.app_gateway_sku_name
-    tier = var.app_gateway_sku_name
+    tier = var.app_gateway_sku_tier
   }
 
   autoscale_configuration {
@@ -47,18 +47,35 @@ resource "azurerm_application_gateway" "appgw" {
     public_ip_address_id = var.agw_public_ip_id
   }
 
+  # The private IP of the internal load balancer in front of the pods (see k8s/service.yaml)
   backend_address_pool {
-    name  = var.backend_pool_name
-    fqdns = [var.container_apps_fqdn]
+    name         = var.backend_pool_name
+    ip_addresses = [var.backend_ip_address]
   }
 
+  # TLS ends at the gateway. From here to the cluster the request stays inside the VNet over HTTP.
   backend_http_settings {
     name                  = var.backend_http_settings_name
     cookie_based_affinity = "Disabled"
-    port                  = 443
-    protocol              = "Https"
+    port                  = 80
+    protocol              = "Http"
     request_timeout       = 20
-    host_name             = var.container_apps_fqdn
+    probe_name            = var.probe_name
+  }
+
+  # The backend is only marked healthy when nginx answers on /health
+  probe {
+    name                = var.probe_name
+    protocol            = "Http"
+    host                = var.probe_host
+    path                = "/health"
+    interval            = 30
+    timeout             = 10
+    unhealthy_threshold = 3
+
+    match {
+      status_code = ["200"]
+    }
   }
 
   http_listener {
@@ -108,4 +125,19 @@ resource "azurerm_application_gateway" "appgw" {
 
   tags = var.tags
 
+}
+
+# Access, performance and firewall logs plus metrics, for troubleshooting unhealthy backends
+resource "azurerm_monitor_diagnostic_setting" "appgw" {
+  name                       = var.diagnostic_setting_name
+  target_resource_id         = azurerm_application_gateway.appgw.id
+  log_analytics_workspace_id = var.log_analytics_workspace_id
+
+  enabled_log {
+    category_group = "allLogs"
+  }
+
+  enabled_metric {
+    category = "AllMetrics"
+  }
 }

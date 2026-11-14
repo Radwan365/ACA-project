@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: tm
+  namespace: tm
+  annotations:
+    # Create a private Azure load balancer inside the VNet instead of a public one
+    service.beta.kubernetes.io/azure-load-balancer-internal: "true"
+    # Fixed private IP in the AKS node subnet. Application Gateway forwards to this address,
+    # so it must match app_backend_ip in infra/terraform.tfvars.
+    service.beta.kubernetes.io/azure-load-balancer-ipv4: "10.0.0.200"
+spec:
+  type: LoadBalancer
+  selector:
+    app.kubernetes.io/name: tm
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80
+      targetPort: http

@@ -1,0 +1,19 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: tm
+  namespace: tm
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: tm
+  policyTypes:
+    - Ingress
+    - Egress
+  # Inbound: only the web port. Everything else to these pods is dropped.
+  ingress:
+    - ports:
+        - protocol: TCP
+          port: 8080
+  # Outbound: nothing. The pods serve static files and never need to call out.
+  egress: []

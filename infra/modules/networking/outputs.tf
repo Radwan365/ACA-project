@@ -10,12 +10,13 @@ output "appgw_subnet_id" {
   depends_on  = [azurerm_subnet_network_security_group_association.appgw_nsg_association]
 }
 
-output "aca_subnet_id" {
-  description = "ID of the Container Apps environment subnet."
-  value       = azurerm_subnet.aca_subnet.id
+output "aks_subnet_id" {
+  description = "ID of the AKS node subnet."
+  value       = azurerm_subnet.aks_subnet.id
   depends_on = [
-    azurerm_subnet_network_security_group_association.aca_nsg_association,
-    azurerm_subnet_nat_gateway_association.aca_nat_association,
+    azurerm_subnet_network_security_group_association.aks_nsg_association,
+    azurerm_subnet_nat_gateway_association.aks_nat_association,
+    azurerm_nat_gateway_public_ip_association.natgw_public_ip_association,
   ]
 }
 

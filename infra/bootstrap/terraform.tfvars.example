@@ -1,0 +1,14 @@
+# Copy to terraform.tfvars (which is gitignored) and fill in your own values.
+
+subscription_id = "00000000-0000-0000-0000-000000000000"
+location        = "eastus"
+
+# Resource group and storage account that hold the Terraform state
+resource_group_name  = "rg-tfstate-tm-eus"
+storage_account_name = "sttfstatetmradwan" # must be globally unique
+
+# Existing resource group the main stack deploys into (see the README)
+deploy_resource_group_name = "rg-tm-dev-eus"
+
+# Must match the repository name exactly, or the pipeline cannot log in to Azure
+github_repo = "Radwan365/AKS-project"

@@ -1,42 +1,110 @@
-name: Docker build CI
+name: Build and deploy
+
+# Builds and scans the image on every change to the app.
+# On main it also pushes the image to ACR and rolls it out to the AKS cluster.
 
 on:
   push:
     branches:
       - main
+    paths:
+      - "app/**"
+      - "k8s/**"
+      - "Dockerfile"
+      - ".github/workflows/docker-build.yml"
+
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "app/**"
+      - "k8s/**"
+      - "Dockerfile"
+      - ".github/workflows/docker-build.yml"
+
+  # Run by hand after the infrastructure has been created or rebuilt
+  workflow_dispatch:
 
 concurrency:
-  group: build -${{ github.ref }}
-  cancel-in-progress: true
-
-env:
-  ACR_NAME: acrtmradwan
-  IMAGE_NAME: tm
+  group: build-deploy-${{ github.ref }}
+  # Superseded pull request builds can be cancelled; a release in progress on main must finish
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
   id-token: write
 
+env:
+  ACR_NAME: acrtmradwan
+  IMAGE_NAME: tm
+  RESOURCE_GROUP: rg-tm-dev-eus
+  AKS_CLUSTER_NAME: aks-tm-dev-eus
+  K8S_NAMESPACE: tm
+  APP_URL: https://tm.theradwan.com
+
 jobs:
-  build-and-push:
+  build:
     name: build, scan & push
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    outputs:
+      pushed: ${{ steps.push.outputs.pushed }}
 
     steps:
       - name: checkout code
         uses: actions/checkout@v6
 
       - name: build docker image
-        run: |
-          docker build -f Dockerfile -t ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ github.sha }} ./app
+        run: docker build -f Dockerfile -t "$ACR_NAME.azurecr.io/$IMAGE_NAME:$GITHUB_SHA" ./app
 
+      # The image is scanned before it is pushed, so a vulnerable image never reaches the registry
       - name: scan image with Grype
         uses: anchore/scan-action@v7
         with:
-          image: "${{env.ACR_NAME}}.azurecr.io/${{ env.IMAGE_NAME }}:${{ github.sha }}"
+          image: "${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ github.sha }}"
           fail-build: true
           severity-cutoff: "high"
           output-format: "table"
+
+      # Everything below only runs on main. Pull requests stop after build and scan.
+      - name: configure azure credentials (OIDC)
+        if: github.event_name != 'pull_request'
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      # The registry is part of the Terraform stack, so it is missing while the environment is destroyed
+      - name: check the registry exists
+        id: registry
+        if: github.event_name != 'pull_request'
+        run: |
+          if az acr show --name "$ACR_NAME" --resource-group "$RESOURCE_GROUP" --output none 2>/dev/null; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Registry $ACR_NAME not found. The environment is not deployed, so push and deploy are skipped."
+          fi
+
+      - name: push image to ACR
+        id: push
+        if: steps.registry.outputs.exists == 'true'
+        run: |
+          az acr login --name "$ACR_NAME"
+          docker push "$ACR_NAME.azurecr.io/$IMAGE_NAME:$GITHUB_SHA"
+          echo "pushed=true" >> "$GITHUB_OUTPUT"
+
+  deploy:
+    name: deploy to AKS
+    needs: build
+    if: needs.build.outputs.pushed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: checkout code
+        uses: actions/checkout@v6
 
       - name: configure azure credentials (OIDC)
         uses: azure/login@v3
@@ -45,9 +113,26 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: login to ACR
-        run: az acr login --name ${{ env.ACR_NAME }}
+      # kubelogin lets kubectl sign in to the cluster with the Azure login above
+      - name: install kubectl and kubelogin
+        run: sudo az aks install-cli
 
-      - name: push image to ACR
+      - name: connect to the cluster
         run: |
-          docker push ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          az aks get-credentials --resource-group "$RESOURCE_GROUP" --name "$AKS_CLUSTER_NAME" --overwrite-existing
+          kubelogin convert-kubeconfig -l azurecli
+
+      # Point the manifests at the image built from this commit. This edits the copy on the runner only.
+      - name: set the image tag
+        working-directory: k8s
+        run: kustomize edit set image "tm=$ACR_NAME.azurecr.io/$IMAGE_NAME:$GITHUB_SHA"
+
+      - name: apply the manifests
+        run: kubectl apply -k k8s
+
+      # Fails the job if the new pods do not become ready, leaving the old pods serving traffic
+      - name: wait for the rollout
+        run: kubectl rollout status deployment/tm --namespace "$K8S_NAMESPACE" --timeout=180s
+
+      - name: smoke test through the gateway
+        run: curl --fail --silent --show-error --retry 10 --retry-delay 15 --retry-all-errors "$APP_URL/health"

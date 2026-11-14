@@ -58,11 +58,6 @@ variable "certificate_secret_id" {
   type        = string
 }
 
-variable "container_apps_fqdn" {
-  description = "The fully qualified domain name of the container app."
-  type        = string
-}
-
 variable "agw_public_ip_id" {
   description = "ID of the Application Gateway's public IP, created in the networking module."
   type        = string
@@ -108,6 +103,36 @@ variable "redirect_configuration_name" {
 
 variable "http_routing_rule_name" {
   description = "The name of the routing rule for the HTTP to HTTPS redirect."
+  type        = string
+}
+
+variable "app_gateway_sku_tier" {
+  description = "The tier of the application gateway SKU."
+  type        = string
+}
+
+variable "backend_ip_address" {
+  description = "Private IP of the internal load balancer in front of the pods. Must match the address in k8s/service.yaml."
+  type        = string
+}
+
+variable "probe_name" {
+  description = "The name of the health probe."
+  type        = string
+}
+
+variable "probe_host" {
+  description = "Host header sent with the health probe."
+  type        = string
+}
+
+variable "log_analytics_workspace_id" {
+  description = "ID of the Log Analytics workspace that receives the gateway's logs and metrics, created in the aks module."
+  type        = string
+}
+
+variable "diagnostic_setting_name" {
+  description = "Name of the diagnostic setting that sends gateway logs and metrics to Log Analytics."
   type        = string
 }
 

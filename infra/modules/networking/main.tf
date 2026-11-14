@@ -6,25 +6,20 @@ resource "azurerm_virtual_network" "vnet" {
 
   tags = var.tags
 }
+
 resource "azurerm_subnet" "appgateway_subnet" {
   name                 = var.appgw_subnet_name
   resource_group_name  = var.resource_group_name
   virtual_network_name = azurerm_virtual_network.vnet.name
   address_prefixes     = var.appgw_subnet_address_prefix
 }
-resource "azurerm_subnet" "aca_subnet" {
-  name                 = var.aca_subnet_name
+
+# AKS nodes and the internal load balancer live here. Pods use a separate overlay range, not this subnet.
+resource "azurerm_subnet" "aks_subnet" {
+  name                 = var.aks_subnet_name
   resource_group_name  = var.resource_group_name
   virtual_network_name = azurerm_virtual_network.vnet.name
-  address_prefixes     = var.aca_subnet_address_prefix
-
-  delegation {
-    name = "aca-delegation"
-    service_delegation {
-      name    = "Microsoft.App/environments"
-      actions = ["Microsoft.Network/virtualNetworks/subnets/join/action"]
-    }
-  }
+  address_prefixes     = var.aks_subnet_address_prefix
 }
 
 resource "azurerm_network_security_group" "nsg_agw" {
@@ -75,14 +70,19 @@ resource "azurerm_network_security_group" "nsg_agw" {
 
   tags = var.tags
 }
-resource "azurerm_network_security_group" "nsg_cae" {
-  name                = var.nsg_cae_name
+
+# No custom rules on purpose. The default rules already allow traffic from inside the VNet
+# (Application Gateway and node-to-node) and from the Azure load balancer, and deny everything
+# arriving from the internet. AKS manages its own node-level rules in the node resource group.
+resource "azurerm_network_security_group" "nsg_aks" {
+  name                = var.nsg_aks_name
   location            = var.location
   resource_group_name = var.resource_group_name
 
   tags = var.tags
 }
 
+# Outbound path for the nodes: pulling images, reaching the AKS control plane and Azure APIs
 resource "azurerm_nat_gateway" "natgw" {
   name                = var.nat_gateway_name
   location            = var.location
@@ -96,9 +96,9 @@ resource "azurerm_subnet_network_security_group_association" "appgw_nsg_associat
   network_security_group_id = azurerm_network_security_group.nsg_agw.id
 }
 
-resource "azurerm_subnet_network_security_group_association" "aca_nsg_association" {
-  subnet_id                 = azurerm_subnet.aca_subnet.id
-  network_security_group_id = azurerm_network_security_group.nsg_cae.id
+resource "azurerm_subnet_network_security_group_association" "aks_nsg_association" {
+  subnet_id                 = azurerm_subnet.aks_subnet.id
+  network_security_group_id = azurerm_network_security_group.nsg_aks.id
 }
 
 resource "azurerm_nat_gateway_public_ip_association" "natgw_public_ip_association" {
@@ -106,8 +106,8 @@ resource "azurerm_nat_gateway_public_ip_association" "natgw_public_ip_associatio
   public_ip_address_id = azurerm_public_ip.natgw.id
 }
 
-resource "azurerm_subnet_nat_gateway_association" "aca_nat_association" {
-  subnet_id      = azurerm_subnet.aca_subnet.id
+resource "azurerm_subnet_nat_gateway_association" "aks_nat_association" {
+  subnet_id      = azurerm_subnet.aks_subnet.id
   nat_gateway_id = azurerm_nat_gateway.natgw.id
 }
 

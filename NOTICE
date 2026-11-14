@@ -1,0 +1,15 @@
+Threat Composer on Azure Kubernetes Service
+
+The application source code in the app/ directory is Threat Composer,
+https://github.com/awslabs/threat-composer
+
+    Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+
+It is licensed under the Apache License, Version 2.0. A copy of that licence
+is in app/LICENSE. The application code is used as provided. The file
+app/nginx.conf was added for this project to configure the web server in the
+container image; it is not part of Threat Composer.
+
+Everything outside app/ (the Dockerfile, Kubernetes manifests, Terraform and
+GitHub Actions workflows) was written for this project and is not part of
+Threat Composer.

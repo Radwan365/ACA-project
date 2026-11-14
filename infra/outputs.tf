@@ -12,3 +12,13 @@ output "website_url" {
   description = "The public URL for the deployed application, once DNS has propagated."
   value       = "https://${var.tm_record_name}.${var.dns_zone_name}"
 }
+
+output "aks_cluster_name" {
+  description = "Name of the AKS cluster, for az aks get-credentials."
+  value       = module.aks.aks_cluster_name
+}
+
+output "acr_login_server" {
+  description = "Login server of the container registry."
+  value       = module.aks.acr_login_server
+}

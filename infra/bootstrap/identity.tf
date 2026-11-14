@@ -65,6 +65,7 @@ locals {
     "7f951dda-4ed3-4680-a7ca-43fe172d538d", # AcrPull
     "4633458b-17de-408a-b874-0445c86b69e6", # Key Vault Secrets User
     "a4417e6f-fecd-4de8-b567-7b0420556985", # Key Vault Certificates Officer
+    "4d97b98b-1d4f-4787-a291-c67834d212e7", # Network Contributor (AKS identity on the node subnet)
   ])
 }
 
@@ -95,4 +96,25 @@ resource "azurerm_role_assignment" "github_rbac_admin" {
      )
     )
   EOT
+}
+
+# ---------------------------------------------------------------------------
+# Kubernetes access
+# ---------------------------------------------------------------------------
+
+# The cluster has local accounts disabled and uses Azure RBAC for Kubernetes authorisation.
+# Contributor does not include access to objects inside the cluster, so it is granted here.
+# Scoped to the deploy resource group, so it applies to the cluster the main stack creates in it.
+resource "azurerm_role_assignment" "github_aks_cluster_admin" {
+  scope                = data.azurerm_resource_group.deploy.id
+  role_definition_name = "Azure Kubernetes Service RBAC Cluster Admin"
+  principal_id         = azurerm_user_assigned_identity.github.principal_id
+  principal_type       = "ServicePrincipal"
+}
+
+# Lets whoever runs the bootstrap use kubectl against the cluster
+resource "azurerm_role_assignment" "deployer_aks_cluster_admin" {
+  scope                = data.azurerm_resource_group.deploy.id
+  role_definition_name = "Azure Kubernetes Service RBAC Cluster Admin"
+  principal_id         = data.azurerm_client_config.current.object_id
 }

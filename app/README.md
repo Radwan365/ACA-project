@@ -1,49 +1,31 @@
-<div align="center">
-    <img src="./images/coderco.jpg" alt="CoderCo" width="300"/>
-</div>
+# Threat Composer (application source)
 
-# CoderCo Assignment 1 - Open Source App Hosted on ECS with Terraform 🚀
+This folder contains the application that the project deploys: [Threat Composer](https://github.com/awslabs/threat-composer), an open-source threat modelling tool from AWS Labs, licensed under Apache-2.0 (see `LICENSE` in this folder and `NOTICE` in the repository root).
 
-This project is based on Amazon's Threat Composer Tool, an open source tool designed to facilitate threat modeling and improve security assessments. You can explore the tool's dashboard here: [Threat Composer Tool](https://awslabs.github.io/threat-composer/workspaces/default/dashboard)
+The code here is the application as it was provided with the assignment. The one file added for this project is `nginx.conf`, which configures the web server inside the container image.
 
-## Task/Assignment 📝
+## Where this came from
 
-- Create your own repository and complete the task there. You may create a `app` in your repo and copy all the files in this directory into it. Or alternatively, you can use this directory as is. Your choice.
+The source was provided as part of a CoderCo assignment. The assignment asked for the app to be containerised and hosted on AWS ECS with Terraform, behind HTTPS on a custom domain. This repository does the same job on Azure instead: the image is stored in Azure Container Registry and runs on Azure Kubernetes Service behind an Application Gateway. See the [root README](../README.md) for the architecture and how it is deployed.
 
-- Your task will be to create a container image for the app, push it to ECR (recommended) or DockerHub. Ideally, you should use a CI/CD pipeline to build, test, and push the container image.
+## Running the app locally
 
-- Deploy the app on ECS using Terraform. All the resources should be provisioned using Terraform. Use TF modules.
-
-- Make sure the app is live on `https://tm.<your-domain>` or `https://tm.labs.<your-domain>`
-
-- App must use HTTPS. Hosted on ECS. Figure out the rest. Once app is live, add screenshots to the README.md file.
-
-- Add architecture diagram of how the infrastructure is setup. (Use Lucidchart or draw.io or mermaid) You are free to use any diagramming tool.
-
-## Local app setup 💻
+Without Docker:
 
 ```bash
 yarn install
 yarn build
 yarn global add serve
 serve -s build
-
-#yarn start
-http://localhost:3000/workspaces/default/dashboard
-
-## or
-yarn global add serve
-serve -s build
 ```
 
-## Useful links 🔗
+Then open http://localhost:3000.
 
-- [Terraform AWS Registry](https://registry.terraform.io/providers/hashicorp/aws/latest/docs)
-- [Terraform AWS ECS](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ecs_cluster)
-- [Terraform Docs](https://www.terraform.io/docs/index.html)
-- [ECS Docs](https://docs.aws.amazon.com/ecs/latest/userguide/what-is-ecs.html)
+With Docker, from the repository root:
 
-## Advice & Tips �
+```bash
+docker build -f Dockerfile -t tm:local ./app
+docker run --rm -p 8080:8080 tm:local
+```
 
-- This is just a simple app, you may use another app if you'd like. 
-- Use best practices for your Terraform code. Use best practices for your container image. Use best practices for your CI/CD pipeline.
+Then open http://localhost:8080. The health endpoint is at http://localhost:8080/health.

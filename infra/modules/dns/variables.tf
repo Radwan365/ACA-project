@@ -23,32 +23,6 @@ variable "agw_public_ip_address" {
   type        = string
 }
 
-variable "aca_environment_default_domain" {
-  description = "The Container Apps environment's auto-generated default domain suffix, created in the container-apps module. Must match it exactly — becomes the private DNS zone's name."
-  type        = string
-}
-
-variable "vnet_link_name" {
-  description = "The name of the private DNS zone's virtual network link."
-  type        = string
-}
-
-variable "vnet_id" {
-  description = "The ID of the VNet, created in the networking module, that the private zone links to."
-  type        = string
-}
-
-variable "private_record_ttl" {
-  description = "TTL, in seconds, for the private wildcard A record."
-  type        = number
-}
-
-variable "aca_static_ip_address" {
-  description = "The Container Apps environment's internal static IP, created in the container-apps module. The private wildcard A record points here."
-  type        = string
-}
-
-
 variable "tags" {
   description = "Tags applied to every resource that supports them."
   type        = map(string)

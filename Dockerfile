@@ -1,14 +1,27 @@
-# stage 1 'builder'
-FROM node:20-alpine AS builder
+# Build context is ./app (see .github/workflows/docker-build.yml)
+
+# Stage 1: build the React app into static files
+FROM node:22-alpine AS builder
 WORKDIR /app
-COPY package*.json yarn.lock ./
-RUN yarn config set network-timeout 600000 && yarn install
+
+# Copy the dependency manifests first so this layer is cached until they change
+COPY package.json yarn.lock ./
+RUN yarn config set network-timeout 600000 \
+    && yarn install --frozen-lockfile
+
 COPY . .
 RUN yarn build
 
-# stage 2 'production'
-FROM nginx:alpine
-RUN apk upgrade --no-cache && apk del --no-cache curl
+# Stage 2: serve the static files with nginx running as a non-root user
+FROM nginxinc/nginx-unprivileged:1.30-alpine-slim
+
+# Pick up security patches for the base image packages, then drop back to the nginx user
+USER root
+RUN apk upgrade --no-cache
+USER 101
+
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=builder /app/build /usr/share/nginx/html
-EXPOSE 80
-CMD [ "nginx", "-g", "daemon off;" ]
+
+# Non-root processes cannot bind ports below 1024, so nginx listens on 8080
+EXPOSE 8080

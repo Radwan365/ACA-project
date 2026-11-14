@@ -28,14 +28,19 @@ variable "appgw_subnet_address_prefix" {
   type        = list(string)
 }
 
-variable "aca_subnet_name" {
-  description = "The name of the ACA subnet."
+variable "aks_subnet_name" {
+  description = "The name of the AKS node subnet."
   type        = string
 }
 
-variable "aca_subnet_address_prefix" {
-  description = "The address prefix for the ACA subnet."
+variable "aks_subnet_address_prefix" {
+  description = "The address prefix for the AKS node subnet."
   type        = list(string)
+}
+
+variable "nsg_aks_name" {
+  description = "The name of the network security group for the AKS node subnet."
+  type        = string
 }
 
 variable "agw_public_ip_name" {
@@ -50,11 +55,6 @@ variable "natgw_public_ip_name" {
 
 variable "nsg_agw_name" {
   description = "The name of the network security group for the application gateway subnet."
-  type        = string
-}
-
-variable "nsg_cae_name" {
-  description = "The name of the network security group for the ACA subnet."
   type        = string
 }
 
@@ -98,18 +98,53 @@ variable "certificate_name" {
   type        = string
 }
 
-variable "container_apps_name" {
-  description = "The name of the container app."
+variable "aks_cluster_name" {
+  description = "The name of the AKS cluster."
   type        = string
 }
 
-variable "container_apps_image" {
-  description = "The repository:tag portion of the image (e.g. 'tm:v1') — the registry hostname is added automatically from the ACR resource's own login_server, not typed here."
+variable "aks_node_resource_group_name" {
+  description = "Name of the resource group AKS creates for the nodes, disks and load balancer."
   type        = string
 }
 
-variable "container_apps_environment_name" {
-  description = "The name of the container app environment."
+variable "aks_identity_name" {
+  description = "Name of the managed identity used by the AKS control plane."
+  type        = string
+}
+
+variable "aks_node_vm_size" {
+  description = "VM size of the AKS nodes."
+  type        = string
+}
+
+variable "aks_node_count" {
+  description = "Number of nodes in the AKS node pool."
+  type        = number
+}
+
+variable "aks_pod_cidr" {
+  description = "Overlay address range for pods. Must not overlap the VNet or the service range."
+  type        = string
+}
+
+variable "aks_service_cidr" {
+  description = "Address range for Kubernetes services. Must not overlap the VNet or the pod range."
+  type        = string
+}
+
+variable "aks_dns_service_ip" {
+  description = "Address of the cluster DNS service. Must be inside aks_service_cidr."
+  type        = string
+}
+
+variable "aks_diagnostic_setting_name" {
+  description = "Name of the diagnostic setting that sends AKS control plane logs to Log Analytics."
+  type        = string
+}
+
+variable "app_backend_ip" {
+  description = "Private IP of the internal load balancer in front of the pods. Must be a free address in the AKS node subnet and match k8s/service.yaml."
   type        = string
 }
 
@@ -125,26 +160,6 @@ variable "azure_container_registry_sku" {
 
 variable "log_analytics_workspace_name" {
   description = "The name of the Log Analytics workspace."
-  type        = string
-}
-
-variable "aca_acr_identity_name" {
-  description = "Name of the managed identity that the Container App uses to pull images from the Container Registry."
-  type        = string
-}
-
-variable "target_port" {
-  description = "The port the container listens on inside the app, referenced by the Container App's ingress configuration."
-  type        = number
-}
-
-variable "container_apps_cpu" {
-  description = "The number of CPU cores allocated to the container app."
-  type        = number
-}
-
-variable "container_apps_memory" {
-  description = "The amount of memory allocated to the container app."
   type        = string
 }
 
@@ -168,16 +183,6 @@ variable "public_record_ttl" {
   type        = number
 }
 
-variable "vnet_link_name" {
-  description = "The name of the private DNS zone's virtual network link."
-  type        = string
-}
-
-variable "private_record_ttl" {
-  description = "TTL, in seconds, for the private wildcard A record."
-  type        = number
-}
-
 variable "frontend_ip_configuration_name" {
   description = "The name of the frontend IP configuration."
   type        = string
@@ -190,6 +195,21 @@ variable "app_gateway_name" {
 
 variable "app_gateway_sku_name" {
   description = "The name of the application gateway SKU."
+  type        = string
+}
+
+variable "app_gateway_sku_tier" {
+  description = "The tier of the application gateway SKU."
+  type        = string
+}
+
+variable "probe_name" {
+  description = "The name of the Application Gateway health probe."
+  type        = string
+}
+
+variable "app_gateway_diagnostic_setting_name" {
+  description = "Name of the diagnostic setting that sends Application Gateway logs and metrics to Log Analytics."
   type        = string
 }
 
@@ -235,7 +255,6 @@ variable "autoscale_configuration" {
     max_capacity = number
   })
 }
-
 
 variable "http_frontend_port_name" {
   description = "The name of the frontend port for plain HTTP (80), used only to redirect to HTTPS."
