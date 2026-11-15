@@ -185,7 +185,7 @@ terraform init
 terraform apply
 ```
 
-`github_repo` must match the repository name exactly, or the pipeline cannot log in.
+`github_repo` must match the subject claim in GitHub's OIDC token exactly, or the pipeline cannot log in. Since 15 July 2026, a repository that is created, renamed or transferred uses the immutable subject format, which appends GitHub's numeric owner and repository IDs: `owner@owner_id/repo@repo_id`.
 
 Add the outputs `AZURE_CLIENT_ID`, `AZURE_TENANT_ID` and `AZURE_SUBSCRIPTION_ID` as GitHub Actions repository secrets.
 
@@ -240,6 +240,7 @@ Then open http://localhost:8080. The health endpoint is at http://localhost:8080
 - **An infrastructure run could roll the app back.** When Terraform owned the image tag, any Terraform run reset the app to the tag written in the variables file, even when the change had nothing to do with the app. Hence the `lifecycle` block and the pipeline-owned release.
 - **Non-root nginx cannot bind port 80.** The container listens on 8080, which is what the Container App's ingress targets.
 - **A single-page app needs a fallback route.** Without `try_files ... /index.html`, refreshing any page other than the home page returns a 404 from nginx.
+- **Renaming the repository broke the pipeline's login.** GitHub's OIDC subject claim moved to an immutable format that appends numeric owner and repository IDs, and a rename opts a repository in permanently. The federated credential in Azure still trusted the old name-only subject, so Azure rejected a token that was otherwise perfectly valid.
 - **Translating the brief.** The assignment was written for AWS, and several of its commands and concepts have no direct Azure equivalent. Working out the Azure version of each piece was a large part of the learning.
 
 ## Known limitations and next steps
