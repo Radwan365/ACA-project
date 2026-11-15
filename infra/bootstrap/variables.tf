@@ -49,13 +49,17 @@ variable "identity_name" {
   default = "id-github-actions"
 }
 
+# This must match the subject claim GitHub puts in the OIDC token, or the pipeline cannot
+# log in to Azure. Since 15 July 2026 any repository that is created, renamed or transferred
+# uses the immutable form, which appends GitHub's numeric owner and repository IDs after an
+# "@". The IDs never change, which is the point: a renamed repository keeps the same trust.
 variable "github_repo" {
   type        = string
-  description = "GitHub repository in owner/repo form"
+  description = "GitHub repository as it appears in the OIDC subject claim: owner@owner_id/repo@repo_id for repositories created, renamed or transferred since 15 July 2026, otherwise owner/repo."
 
   validation {
     condition     = can(regex("^[^/]+/[^/]+$", var.github_repo))
-    error_message = "Must be in owner/repo form."
+    error_message = "Must be in owner/repo or owner@owner_id/repo@repo_id form."
   }
 }
 

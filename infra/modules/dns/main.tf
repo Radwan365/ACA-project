@@ -1,5 +1,5 @@
-# Created by bootstrap/bootstrap.sh, deliberately kept outside Terraform so a destroy
-# doesn't change the name servers delegated at GoDaddy
+# Created once by hand, deliberately kept outside Terraform so a destroy doesn't delete
+# the zone and change the name servers delegated at the registrar
 data "azurerm_dns_zone" "public" {
   name                = var.dns_zone_name
   resource_group_name = var.resource_group_name

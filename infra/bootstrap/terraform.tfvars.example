@@ -1,0 +1,19 @@
+# Copy to terraform.tfvars (which is gitignored) and fill in your own values.
+
+subscription_id = "00000000-0000-0000-0000-000000000000"
+location        = "eastus"
+
+# Resource group and storage account that hold the Terraform state
+resource_group_name  = "rg-tfstate-tm-eus"
+storage_account_name = "sttfstatetmradwan" # must be globally unique
+
+# Existing resource group the main stack deploys into (see the README)
+deploy_resource_group_name = "rg-tm-dev-eus"
+
+# Must match the subject claim in GitHub's OIDC token exactly, or the pipeline cannot log
+# in to Azure. Repositories created, renamed or transferred since 15 July 2026 use the
+# immutable form below. Get the two IDs with:
+#   gh api users/<owner> --jq .id
+#   gh api repos/<owner>/<repo> --jq .id
+# A failed login also prints the exact subject GitHub sent.
+github_repo = "Radwan365@181744394/ACA-project@1431242105"

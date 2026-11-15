@@ -16,6 +16,7 @@ output "aca_subnet_id" {
   depends_on = [
     azurerm_subnet_network_security_group_association.aca_nsg_association,
     azurerm_subnet_nat_gateway_association.aca_nat_association,
+    azurerm_nat_gateway_public_ip_association.natgw_public_ip_association,
   ]
 }
 

@@ -1,4 +1,6 @@
 terraform {
+  required_version = ">= 1.9"
+
   required_providers {
     azurerm = {
       source  = "hashicorp/azurerm"
@@ -30,6 +32,8 @@ provider "azurerm" {
       purge_soft_delete_on_destroy = false
     }
   }
+
+  # The pipeline identity cannot register resource providers, so they are registered once by hand (see the README)
   resource_provider_registrations = "none"
 }
 

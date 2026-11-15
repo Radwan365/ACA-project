@@ -9,7 +9,7 @@ resource "azurerm_application_gateway" "appgw" {
 
   sku {
     name = var.app_gateway_sku_name
-    tier = var.app_gateway_sku_name
+    tier = var.app_gateway_sku_tier
   }
 
   autoscale_configuration {
@@ -59,6 +59,24 @@ resource "azurerm_application_gateway" "appgw" {
     protocol              = "Https"
     request_timeout       = 20
     host_name             = var.container_apps_fqdn
+    probe_name            = var.probe_name
+  }
+
+  # The backend is only marked healthy when nginx itself answers on /health.
+  # Without this the gateway uses its default probe against "/", which can report
+  # a backend as healthy while the application behind it is broken.
+  probe {
+    name                = var.probe_name
+    protocol            = "Https"
+    host                = var.container_apps_fqdn
+    path                = "/health"
+    interval            = 30
+    timeout             = 10
+    unhealthy_threshold = 3
+
+    match {
+      status_code = ["200"]
+    }
   }
 
   http_listener {
@@ -108,4 +126,19 @@ resource "azurerm_application_gateway" "appgw" {
 
   tags = var.tags
 
+}
+
+# Access and performance logs plus metrics, so an unhealthy backend can be diagnosed
+resource "azurerm_monitor_diagnostic_setting" "appgw" {
+  name                       = var.diagnostic_setting_name
+  target_resource_id         = azurerm_application_gateway.appgw.id
+  log_analytics_workspace_id = var.log_analytics_workspace_id
+
+  enabled_log {
+    category_group = "allLogs"
+  }
+
+  enabled_metric {
+    category = "AllMetrics"
+  }
 }

@@ -1,6 +1,18 @@
-name: Terraform apply
+name: Terraform
+
+# Pull requests: format check, validate, Checkov and plan.
+# Push to main: the same, then apply.
+# Weekly schedule: apply, so the TLS certificate is renewed before it expires.
 
 on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "infra/**"
+      - "!infra/bootstrap/**"
+      - ".github/workflows/deploy.yml"
+
   push:
     branches:
       - main
@@ -9,16 +21,16 @@ on:
       - "!infra/bootstrap/**"
       - ".github/workflows/deploy.yml"
 
-  workflow_run:
-    workflows: ["Docker build CI"]
-    types:
-      - completed
-    branches:
-      - main
+  schedule:
+    # Mondays 05:17 UTC
+    - cron: "17 5 * * 1"
+
+  workflow_dispatch:
 
 concurrency:
   group: terraform-tm-dev
-  cancel-in-progress: true
+  # Never cancel a running apply: it can leave the state locked and resources half-created
+  cancel-in-progress: false
 
 permissions:
   contents: read
@@ -30,15 +42,54 @@ env:
   ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
   ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
   ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-  ACR_NAME: acrtmradwan
-  IMAGE_NAME: tm
   TF_IN_AUTOMATION: true
+  RESOURCE_GROUP: rg-tm-dev-eus
+  CONTAINER_APP_ENVIRONMENT: cae-tm-dev-eus
 
 jobs:
-  plan-and-apply:
+  # A scheduled run must not rebuild an environment that was destroyed on purpose.
+  # It only continues when the environment exists. Every other trigger always continues.
+  guard:
+    name: decide whether to run
+    # Dependabot pull requests have no access to the Azure secrets
+    if: github.actor != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      run: ${{ steps.decide.outputs.run }}
+
+    steps:
+      - name: Azure login (OIDC)
+        if: github.event_name == 'schedule'
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: decide
+        id: decide
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          if [ "$EVENT_NAME" != "schedule" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          az extension add --name containerapp --upgrade --only-show-errors
+          if az containerapp env show --name "$CONTAINER_APP_ENVIRONMENT" --resource-group "$RESOURCE_GROUP" --output none 2>/dev/null; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::$CONTAINER_APP_ENVIRONMENT not found. The environment is not deployed, so the scheduled run is skipped."
+          fi
+
+  terraform:
+    name: plan and apply
+    needs: guard
+    if: needs.guard.outputs.run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success')
     defaults:
       run:
         working-directory: infra
@@ -59,8 +110,9 @@ jobs:
         with:
           terraform_version: 1.12.2
 
+      # -recursive so the modules are checked too, not just the root files
       - name: Terraform Format
-        run: terraform fmt -check
+        run: terraform fmt -check -recursive
 
       - name: Terraform Init
         run: terraform init -input=false
@@ -80,5 +132,7 @@ jobs:
       - name: Terraform Plan
         run: terraform plan -input=false -out=tfplan
 
+      # Pull requests stop at the plan, so the change can be reviewed before it is applied
       - name: Terraform Apply
+        if: github.event_name != 'pull_request'
         run: terraform apply -input=false tfplan

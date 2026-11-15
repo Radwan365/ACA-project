@@ -22,8 +22,6 @@ env:
   ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
   ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
   ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-  ACR_NAME: acrtmradwan
-  IMAGE_NAME: tm
   TF_IN_AUTOMATION: true
 
 jobs:
@@ -52,8 +50,7 @@ jobs:
           terraform_version: 1.12.2
 
       - name: terraform init
-        run: |
-          terraform init -input=false
+        run: terraform init -input=false
 
       - name: terraform plan
         run: terraform plan -destroy -input=false -out=tfplan

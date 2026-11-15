@@ -1,53 +1,105 @@
-name: Docker build CI
+name: Build and deploy
+
+# Builds and scans the image on every change to the app.
+# On main it also pushes the image to ACR and releases it to the Container App.
 
 on:
   push:
     branches:
       - main
+    paths:
+      - "app/**"
+      - "Dockerfile"
+      - ".github/workflows/docker-build.yml"
+
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "app/**"
+      - "Dockerfile"
+      - ".github/workflows/docker-build.yml"
+
+  # Run by hand after the infrastructure has been created or rebuilt
+  workflow_dispatch:
 
 concurrency:
-  group: build -${{ github.ref }}
-  cancel-in-progress: true
-
-env:
-  ACR_NAME: acrtmradwan
-  IMAGE_NAME: tm
+  group: build-deploy-${{ github.ref }}
+  # Superseded pull request builds can be cancelled; a release in progress on main must finish
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
   id-token: write
 
+env:
+  ACR_NAME: acrtmradwan
+  IMAGE_NAME: tm
+  RESOURCE_GROUP: rg-tm-dev-eus
+  CONTAINER_APP_NAME: ca-tm-dev-eus
+  APP_URL: https://tm.theradwan.com
+
 jobs:
-  build-and-push:
-    name: build, scan & push
+  build-and-deploy:
+    name: build, scan, push & release
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
       - name: checkout code
         uses: actions/checkout@v6
 
       - name: build docker image
-        run: |
-          docker build -f Dockerfile -t ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ github.sha }} ./app
+        run: docker build -f Dockerfile -t "$ACR_NAME.azurecr.io/$IMAGE_NAME:$GITHUB_SHA" ./app
 
+      # The image is scanned before it is pushed, so a vulnerable image never reaches the registry
       - name: scan image with Grype
         uses: anchore/scan-action@v7
         with:
-          image: "${{env.ACR_NAME}}.azurecr.io/${{ env.IMAGE_NAME }}:${{ github.sha }}"
+          image: "${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ github.sha }}"
           fail-build: true
           severity-cutoff: "high"
           output-format: "table"
 
+      # Everything below only runs on main. Pull requests stop after build and scan.
       - name: configure azure credentials (OIDC)
+        if: github.event_name != 'pull_request'
         uses: azure/login@v3
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: login to ACR
-        run: az acr login --name ${{ env.ACR_NAME }}
+      # The Container App is part of the Terraform stack, so it is missing while the
+      # environment is destroyed. Skip the release rather than failing the build.
+      - name: check the environment is deployed
+        id: environment
+        if: github.event_name != 'pull_request'
+        run: |
+          az extension add --name containerapp --upgrade --only-show-errors
+          if az containerapp show --name "$CONTAINER_APP_NAME" --resource-group "$RESOURCE_GROUP" --output none 2>/dev/null; then
+            echo "deployed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "deployed=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::$CONTAINER_APP_NAME not found. The environment is not deployed, so push and release are skipped."
+          fi
 
       - name: push image to ACR
+        if: steps.environment.outputs.deployed == 'true'
         run: |
-          docker push ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          az acr login --name "$ACR_NAME"
+          docker push "$ACR_NAME.azurecr.io/$IMAGE_NAME:$GITHUB_SHA"
+
+      # Creates a new revision of the Container App running this commit's image
+      - name: release the new image
+        if: steps.environment.outputs.deployed == 'true'
+        run: |
+          az containerapp update \
+            --name "$CONTAINER_APP_NAME" \
+            --resource-group "$RESOURCE_GROUP" \
+            --image "$ACR_NAME.azurecr.io/$IMAGE_NAME:$GITHUB_SHA" \
+            --output none
+
+      - name: smoke test through the gateway
+        if: steps.environment.outputs.deployed == 'true'
+        run: curl --fail --silent --show-error --retry 10 --retry-delay 15 --retry-all-errors "$APP_URL/health"

@@ -19,38 +19,46 @@ nat_gateway_name            = "ngw-cae-tm-dev-eus"
 key_vault_sku_name      = "standard"
 key_vault_name          = "kv-tm-radwan-eus"
 agw_kv_identity_name    = "id-agw-kv-tm-dev-eus"
-acme_registration_email = "radwan201626@outlook.com" # CHANGE ME: Let's Encrypt registration email
+acme_registration_email = "radwan201626@outlook.com"
 common_name             = "tm.theradwan.com"
 certificate_name        = "cert-tm-dev-eus"
 
 # --- container-apps ---
 container_apps_name             = "ca-tm-dev-eus"
-container_apps_image            = "tm:ce3ca1a8dc02fcef92610c1995ed4bf7d7a54c9a"
 container_apps_environment_name = "cae-tm-dev-eus"
 azure_container_registry_name   = "acrtmradwan"
 azure_container_registry_sku    = "Basic"
 log_analytics_workspace_name    = "log-tm-dev-eus"
 log_analytics_workspace_sku     = "PerGB2018"
-target_port                     = 80
+target_port                     = 8080
 aca_acr_identity_name           = "id-aca-acr-tm-dev-eus"
 container_apps_cpu              = 0.25
 container_apps_memory           = "0.5Gi"
+min_replicas                    = 1
+max_replicas                    = 3
+
+# Public placeholder, used only when the Container App is first created. The build
+# pipeline releases the real image straight after, and Terraform ignores it from then on.
+initial_container_image = "mcr.microsoft.com/k8se/quickstart:latest"
 
 # --- app-gateway ---
-app_gateway_name               = "agw-tm-dev-eus"
-app_gateway_sku_name           = "Standard_v2"
-gateway_ip_configuration_name  = "gwip-agw-tm-dev-eus"
-frontend_ip_configuration_name = "feip-agw-tm-dev-eus"
-frontend_port_name             = "feport-443"
-backend_pool_name              = "bepool-ca-tm-dev-eus"
-backend_http_settings_name     = "behttp-ca-tm-dev-eus"
-https_listener_name            = "lstn-https-tm-dev-eus"
-ssl_certificate_name           = "ssl-tm-dev-eus"
-routing_rule_name              = "rule-tm-dev-eus"
-http_frontend_port_name        = "feport-80"
-http_listener_name             = "lstn-http-tm-dev-eus"
-redirect_configuration_name    = "redir-https-tm-dev-eus"
-http_routing_rule_name         = "rule-http-tm-dev-eus"
+app_gateway_name                    = "agw-tm-dev-eus"
+app_gateway_sku_name                = "Standard_v2"
+app_gateway_sku_tier                = "Standard_v2"
+gateway_ip_configuration_name       = "gwip-agw-tm-dev-eus"
+frontend_ip_configuration_name      = "feip-agw-tm-dev-eus"
+frontend_port_name                  = "feport-443"
+backend_pool_name                   = "bepool-ca-tm-dev-eus"
+backend_http_settings_name          = "behttp-ca-tm-dev-eus"
+probe_name                          = "probe-health-tm-dev-eus"
+https_listener_name                 = "lstn-https-tm-dev-eus"
+ssl_certificate_name                = "ssl-tm-dev-eus"
+routing_rule_name                   = "rule-tm-dev-eus"
+http_frontend_port_name             = "feport-80"
+http_listener_name                  = "lstn-http-tm-dev-eus"
+redirect_configuration_name         = "redir-https-tm-dev-eus"
+http_routing_rule_name              = "rule-http-tm-dev-eus"
+app_gateway_diagnostic_setting_name = "diag-agw-tm-dev-eus"
 autoscale_configuration = {
   min_capacity = 0
   max_capacity = 2
@@ -70,7 +78,9 @@ tags = {
   managed_by  = "terraform"
 }
 
+# Object IDs allowed to write the TLS certificate into Key Vault.
+# Both come from the outputs of infra/bootstrap.
 certificate_officer_principal_ids = {
   deployer       = "bd225c40-8669-4429-8bd9-383041309a74"
-  github_actions = "0cfcdfe7-b2ab-43a3-9246-9ff65debad60"
+  github_actions = "c5593398-ccce-4ec1-b209-97ca6834098a"
 }
