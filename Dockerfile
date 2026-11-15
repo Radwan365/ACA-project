@@ -13,7 +13,7 @@ COPY . .
 RUN yarn build
 
 # Stage 2: serve the static files with nginx running as a non-root user
-FROM nginxinc/nginx-unprivileged:1.30-alpine-slim
+FROM nginxinc/nginx-unprivileged:1.31-alpine-slim
 
 # Pick up security patches for the base image packages, then drop back to the nginx user
 USER root
