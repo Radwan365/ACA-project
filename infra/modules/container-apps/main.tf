@@ -8,10 +8,6 @@ resource "azurerm_log_analytics_workspace" "law" {
   tags = var.tags
 }
 
-# On a fresh deploy the image must be in ACR before the Container App is created:
-#   terraform apply -target=module.container_apps.azurerm_container_registry.acr
-#   docker push <acr>.azurecr.io/<container_apps_image>
-#   terraform apply
 resource "azurerm_container_registry" "acr" {
 
   #checkov:skip=CKV_AZURE_164:Content trust requires Premium SKU; not used for cost
@@ -44,6 +40,7 @@ resource "azurerm_role_assignment" "acr_pull" {
   principal_id         = azurerm_user_assigned_identity.aca_acr_identity.principal_id
   role_definition_name = "AcrPull"
   scope                = azurerm_container_registry.acr.id
+  principal_type       = "ServicePrincipal"
 }
 
 # RBAC assignments take a few minutes to propagate; wait before the app tries to pull
@@ -83,15 +80,22 @@ resource "azurerm_container_app" "app" {
     identity_ids = [azurerm_user_assigned_identity.aca_acr_identity.id]
   }
 
+  # Credentials for pulling the real application image from ACR. The placeholder image used
+  # when this app is first created comes from a public registry and needs no credentials.
   registry {
     server   = azurerm_container_registry.acr.login_server
     identity = azurerm_user_assigned_identity.aca_acr_identity.id
   }
 
   template {
+    # At least one instance always running: the Application Gateway health probe would
+    # report the backend as unhealthy if the app were allowed to scale to zero
+    min_replicas = var.min_replicas
+    max_replicas = var.max_replicas
+
     container {
       name   = "tm"
-      image  = "${azurerm_container_registry.acr.login_server}/${var.container_apps_image}"
+      image  = var.initial_container_image
       cpu    = var.container_apps_cpu
       memory = var.container_apps_memory
     }
@@ -112,4 +116,12 @@ resource "azurerm_container_app" "app" {
   tags = var.tags
 
   depends_on = [time_sleep.acr_pull_propagation]
+
+  # The running image is owned by the build pipeline, which releases it with
+  # `az containerapp update --image` after pushing to ACR. Terraform sets the image
+  # only when this app is first created, and ignores it from then on, so an
+  # infrastructure change can never roll the application back to an older version.
+  lifecycle {
+    ignore_changes = [template[0].container[0].image]
+  }
 }

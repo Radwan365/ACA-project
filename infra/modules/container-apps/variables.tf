@@ -13,9 +13,19 @@ variable "container_apps_name" {
   type        = string
 }
 
-variable "container_apps_image" {
-  description = "The image of the container app."
+variable "initial_container_image" {
+  description = "Full image reference used only when the Container App is first created. The build pipeline releases every image after that, and Terraform ignores the running image, so this value is not read again."
   type        = string
+}
+
+variable "min_replicas" {
+  description = "Minimum number of replicas of the container app."
+  type        = number
+}
+
+variable "max_replicas" {
+  description = "Maximum number of replicas of the container app."
+  type        = number
 }
 
 variable "container_apps_subnet_id" {

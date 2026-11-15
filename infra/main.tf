@@ -1,4 +1,6 @@
-# Created by bootstrap/bootstrap.sh, deliberately kept outside Terraform
+# Created once by hand, deliberately kept outside Terraform so a destroy of this stack
+# never removes the group or the public DNS zone inside it (see "Deploying from scratch"
+# in the README)
 data "azurerm_resource_group" "rg" {
   name = var.resource_group_name
 }
@@ -47,7 +49,7 @@ module "container_apps" {
   location                        = var.location
   tags                            = var.tags
   container_apps_name             = var.container_apps_name
-  container_apps_image            = var.container_apps_image
+  initial_container_image         = var.initial_container_image
   container_apps_environment_name = var.container_apps_environment_name
   azure_container_registry_name   = var.azure_container_registry_name
   azure_container_registry_sku    = var.azure_container_registry_sku
@@ -57,6 +59,8 @@ module "container_apps" {
   aca_acr_identity_name           = var.aca_acr_identity_name
   container_apps_cpu              = var.container_apps_cpu
   container_apps_memory           = var.container_apps_memory
+  min_replicas                    = var.min_replicas
+  max_replicas                    = var.max_replicas
 
   # wired from networking
   container_apps_subnet_id = module.networking.aca_subnet_id
@@ -70,12 +74,14 @@ module "app_gateway" {
   tags                           = var.tags
   app_gateway_name               = var.app_gateway_name
   app_gateway_sku_name           = var.app_gateway_sku_name
+  app_gateway_sku_tier           = var.app_gateway_sku_tier
   autoscale_configuration        = var.autoscale_configuration
   gateway_ip_configuration_name  = var.gateway_ip_configuration_name
   frontend_ip_configuration_name = var.frontend_ip_configuration_name
   frontend_port_name             = var.frontend_port_name
   backend_pool_name              = var.backend_pool_name
   backend_http_settings_name     = var.backend_http_settings_name
+  probe_name                     = var.probe_name
   https_listener_name            = var.https_listener_name
   ssl_certificate_name           = var.ssl_certificate_name
   routing_rule_name              = var.routing_rule_name
@@ -83,6 +89,7 @@ module "app_gateway" {
   http_listener_name             = var.http_listener_name
   redirect_configuration_name    = var.redirect_configuration_name
   http_routing_rule_name         = var.http_routing_rule_name
+  diagnostic_setting_name        = var.app_gateway_diagnostic_setting_name
 
   # wired from networking
   appgw_subnet_id  = module.networking.appgw_subnet_id
@@ -93,7 +100,8 @@ module "app_gateway" {
   certificate_secret_id = module.key_vault.certificate_secret_id
 
   # wired from container-apps
-  container_apps_fqdn = module.container_apps.container_apps_fqdn
+  container_apps_fqdn        = module.container_apps.container_apps_fqdn
+  log_analytics_workspace_id = module.container_apps.log_analytics_workspace_id
 }
 
 module "dns" {

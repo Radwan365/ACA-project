@@ -103,9 +103,19 @@ variable "container_apps_name" {
   type        = string
 }
 
-variable "container_apps_image" {
-  description = "The repository:tag portion of the image (e.g. 'tm:v1') — the registry hostname is added automatically from the ACR resource's own login_server, not typed here."
+variable "initial_container_image" {
+  description = "Full image reference used only when the Container App is first created. The build pipeline releases every image after that, so this value is not read again."
   type        = string
+}
+
+variable "min_replicas" {
+  description = "Minimum number of replicas of the container app."
+  type        = number
+}
+
+variable "max_replicas" {
+  description = "Maximum number of replicas of the container app."
+  type        = number
 }
 
 variable "container_apps_environment_name" {
@@ -193,6 +203,21 @@ variable "app_gateway_sku_name" {
   type        = string
 }
 
+variable "app_gateway_sku_tier" {
+  description = "The tier of the application gateway SKU."
+  type        = string
+}
+
+variable "probe_name" {
+  description = "The name of the Application Gateway health probe."
+  type        = string
+}
+
+variable "app_gateway_diagnostic_setting_name" {
+  description = "Name of the diagnostic setting that sends Application Gateway logs and metrics to Log Analytics."
+  type        = string
+}
+
 variable "backend_pool_name" {
   description = "The name of the backend pool."
   type        = string
@@ -235,7 +260,6 @@ variable "autoscale_configuration" {
     max_capacity = number
   })
 }
-
 
 variable "http_frontend_port_name" {
   description = "The name of the frontend port for plain HTTP (80), used only to redirect to HTTPS."

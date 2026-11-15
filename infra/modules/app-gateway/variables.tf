@@ -111,6 +111,26 @@ variable "http_routing_rule_name" {
   type        = string
 }
 
+variable "app_gateway_sku_tier" {
+  description = "The tier of the application gateway SKU. Separate from the SKU name so a change to one is a deliberate change to both."
+  type        = string
+}
+
+variable "probe_name" {
+  description = "The name of the custom health probe."
+  type        = string
+}
+
+variable "log_analytics_workspace_id" {
+  description = "ID of the Log Analytics workspace that receives the gateway's logs and metrics, created in the container-apps module."
+  type        = string
+}
+
+variable "diagnostic_setting_name" {
+  description = "Name of the diagnostic setting that sends gateway logs and metrics to Log Analytics."
+  type        = string
+}
+
 variable "tags" {
   description = "Tags applied to every resource that supports them."
   type        = map(string)
