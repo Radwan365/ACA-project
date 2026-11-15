@@ -1,7 +1,7 @@
 # Build context is ./app (see .github/workflows/docker-build.yml)
 
 # Stage 1: build the React app into static files
-FROM node:22-alpine AS builder
+FROM node:26-alpine AS builder
 WORKDIR /app
 
 # Copy the dependency manifests first so this layer is cached until they change
