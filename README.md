@@ -35,7 +35,7 @@ Outbound traffic from the app, such as pulling its image from the registry, leav
 | Area | Tool |
 |---|---|
 | App | React (Create React App, TypeScript), served by nginx |
-| Container | Docker multi-stage build (`node:22-alpine` build stage, non-root `nginx-unprivileged` runtime stage) |
+| Container | Docker multi-stage build (`node:24-alpine` build stage, non-root `nginx-unprivileged` runtime stage) |
 | Compute | Azure Container Apps, internal workload profiles environment |
 | Ingress and TLS | Azure Application Gateway Standard_v2, Let's Encrypt certificate in Key Vault |
 | Networking | VNet, two subnets, NSGs, NAT Gateway, public and private DNS zones |
