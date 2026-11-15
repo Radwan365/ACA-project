@@ -12,6 +12,12 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    ignore:
+      # Node 26 dropped the bundled Yarn v1 this project builds with, so a major
+      # bump needs a Dockerfile change too. Review those by hand rather than
+      # getting a pull request that cannot pass CI every week.
+      - dependency-name: "node"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: terraform
     directory: /infra

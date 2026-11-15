@@ -1,7 +1,9 @@
 # Build context is ./app (see .github/workflows/docker-build.yml)
 
-# Stage 1: build the React app into static files
-FROM node:22-alpine AS builder
+# Stage 1: build the React app into static files.
+# Pinned to Node 24: this project uses Yarn v1, which the official node images
+# stopped bundling at Node 26 because Yarn v1 is frozen upstream.
+FROM node:24-alpine AS builder
 WORKDIR /app
 
 # Copy the dependency manifests first so this layer is cached until they change
