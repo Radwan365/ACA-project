@@ -59,6 +59,9 @@ jobs:
           image: "${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ github.sha }}"
           fail-build: true
           severity-cutoff: "high"
+          # Fail only on findings that have a patched version available. A High CVE with no
+          # upstream fix cannot be removed by rebuilding, so it is reported but does not block.
+          only-fixed: true
           output-format: "table"
 
       # Everything below only runs on main. Pull requests stop after build and scan.
